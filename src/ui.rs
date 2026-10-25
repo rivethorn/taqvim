@@ -2,7 +2,7 @@ use ratatui::Frame;
 use ratatui::layout::{Constraint, Direction, Layout, Rect};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
-use ratatui::widgets::{Block, Borders, Paragraph, Wrap};
+use ratatui::widgets::{Block, Borders, Paragraph, Wrap, BorderType};
 use crate::app::App;
 use crate::calendar::{month_days, format_persian, weekday_name, MONTH_NAMES, WEEKDAYS, PDate, weekday_persian};
 
@@ -19,7 +19,7 @@ pub fn draw(f: &mut Frame, app: &App) {
         Span::raw("   "),
         Span::styled(format!("Today: {}", format_persian(app.today)), Style::default().fg(Color::Green)),
     ]))
-    .block(Block::default().borders(Borders::ALL).title("Header"));
+    .block(Block::default().borders(Borders::ALL).border_type(BorderType::Rounded).title("Header"));
     f.render_widget(header, chunks[0]);
 
     let body = Layout::default()
@@ -35,7 +35,7 @@ pub fn draw(f: &mut Frame, app: &App) {
     } else {
         format!("Mode: {:?} | h/j/k/l move  gg/G top/bottom  H/L month  Y year  t today  ? help  q quit", app.mode)
     };
-    let footer = Paragraph::new(status).block(Block::default().borders(Borders::ALL).title("Status"));
+    let footer = Paragraph::new(status).block(Block::default().borders(Borders::ALL).border_type(BorderType::Rounded).title("Status"));
     f.render_widget(footer, chunks[2]);
 
     if app.show_help {
@@ -83,7 +83,7 @@ fn draw_calendar(f: &mut Frame, app: &App, area: Rect) {
         lines.push(Line::from(row_spans));
     }
 
-    let para = Paragraph::new(lines).block(Block::default().borders(Borders::ALL).title("Calendar"));
+    let para = Paragraph::new(lines).block(Block::default().borders(Borders::ALL).border_type(BorderType::Rounded).title("Calendar"));
     f.render_widget(para, area);
 }
 
@@ -115,7 +115,7 @@ fn draw_side(f: &mut Frame, app: &App, area: Rect) {
         weekday_name(app.selected),
         app.selected_events().map(|v| v.len()).unwrap_or(0)
     );
-    let p = Paragraph::new(sel_info).block(Block::default().borders(Borders::ALL).title("Selected"));
+    let p = Paragraph::new(sel_info).block(Block::default().borders(Borders::ALL).border_type(BorderType::Rounded).title("Selected"));
     f.render_widget(p, chunks[0]);
 
     let mut text = String::new();
@@ -126,7 +126,7 @@ fn draw_side(f: &mut Frame, app: &App, area: Rect) {
     } else {
         text.push_str("No events. Press 'a' to add.");
     }
-    let p = Paragraph::new(text).wrap(Wrap { trim: true }).block(Block::default().borders(Borders::ALL).title("Events"));
+    let p = Paragraph::new(text).wrap(Wrap { trim: true }).block(Block::default().borders(Borders::ALL).border_type(BorderType::Rounded).title("Events"));
     f.render_widget(p, chunks[1]);
 }
 
@@ -137,7 +137,7 @@ h/l: prev/next day   j/k: next/prev week (7 days)\ngg: first day of month   G: l
 H/L: prev/next month   (year) move with Y/y? \n\
 t: today   a: add event   d: delete event   /: command\n\
 ? : toggle help   q: quit\n";
-    let p = Paragraph::new(help).block(Block::default().borders(Borders::ALL).title("Help"));
+    let p = Paragraph::new(help).block(Block::default().borders(Borders::ALL).border_type(BorderType::Rounded).title("Help"));
     f.render_widget(p, area);
 }
 
@@ -173,7 +173,7 @@ fn draw_event_edit(f: &mut Frame, app: &App) {
         Line::from(""),
         Line::from(Span::styled("Tab/Enter switch field. Enter on Note saves. Esc cancels.", Style::default().fg(Color::Gray))),
     ];
-    let p = Paragraph::new(lines).block(Block::default().borders(Borders::ALL).title("New Event"));
+    let p = Paragraph::new(lines).block(Block::default().borders(Borders::ALL).border_type(BorderType::Rounded).title("New Event"));
     f.render_widget(p, area);
 }
 
