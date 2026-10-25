@@ -40,7 +40,7 @@ fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-fn dummy_tx() -> std::sync::mpsc::Sender<String> {
+fn dummy_tx() -> std::sync::mpsc::Sender<u32> {
     // daemon handles tray; keep a dummy channel to satisfy handle_key signature
     let (tx, _rx) = std::sync::mpsc::channel();
     tx
@@ -92,7 +92,7 @@ fn run_daemon() -> anyhow::Result<()> {
 
     let tray_tx = tray::start_tray();
     let mut today = calendar::today_persian();
-    let _ = tray_tx.send(format!("{} - {}", calendar::weekday_name(today), calendar::format_persian(today)));
+    let _ = tray_tx.send(today.day);
 
     loop {
         if tray::quit_requested() {
@@ -104,13 +104,13 @@ fn run_daemon() -> anyhow::Result<()> {
         if t != today {
             today = t;
         }
-        let _ = tray_tx.send(format!("{} - {}", calendar::weekday_name(today), calendar::format_persian(today)));
+        let _ = tray_tx.send(t.day);
     }
     Ok(())
 }
 
 
-fn handle_key(app: &mut App, key: KeyEvent, pending_g: &mut bool, tray_tx: &std::sync::mpsc::Sender<String>) {
+fn handle_key(app: &mut App, key: KeyEvent, pending_g: &mut bool, tray_tx: &std::sync::mpsc::Sender<u32>) {
     if app.mode == Mode::Command {
         match key.code {
             KeyCode::Esc => {
@@ -171,7 +171,7 @@ fn handle_key(app: &mut App, key: KeyEvent, pending_g: &mut bool, tray_tx: &std:
         KeyCode::Char('?') => app.show_help = true,
         KeyCode::Char('t') => {
             app.go_today();
-            let _ = tray_tx.send(format!("{} - {}", calendar::weekday_name(app.today), calendar::format_persian(app.today)));
+            let _ = tray_tx.send(app.today.day);
         }
         KeyCode::Char('h') => app.move_day(-1),
         KeyCode::Char('l') => app.move_day(1),
@@ -211,14 +211,14 @@ fn handle_key(app: &mut App, key: KeyEvent, pending_g: &mut bool, tray_tx: &std:
     }
 }
 
-fn execute_command(app: &mut App, tray_tx: &std::sync::mpsc::Sender<String>) {
+fn execute_command(app: &mut App, tray_tx: &std::sync::mpsc::Sender<u32>) {
     let cmd = app.command_buf.trim().to_string();
     let parts: Vec<&str> = cmd.split_whitespace().collect();
     match parts.as_slice() {
         ["quit"] | ["q"] => app.should_quit = true,
         ["today"] | ["t"] => {
             app.go_today();
-            let _ = tray_tx.send(format!("{} - {}", calendar::weekday_name(app.today), calendar::format_persian(app.today)));
+            let _ = tray_tx.send(calendar::today_persian().day);
         }
         ["add", rest @ ..] => {
             let title = rest.join(" ");
