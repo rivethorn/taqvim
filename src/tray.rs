@@ -1,13 +1,20 @@
 use tray_icon::{TrayIconBuilder, Icon};
 use tray_icon::menu::{Menu, MenuItem, MenuEvent};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{Receiver, channel};
 use std::thread;
+
+static QUIT_REQUESTED: AtomicBool = AtomicBool::new(false);
+
+pub fn quit_requested() -> bool {
+    QUIT_REQUESTED.load(Ordering::Relaxed)
+}
 
 pub fn start_tray() -> std::sync::mpsc::Sender<String> {
     let (tx, rx): (std::sync::mpsc::Sender<String>, Receiver<String>) = channel();
     thread::spawn(move || {
         let menu = Menu::new();
-        let quit_item = MenuItem::new("Quit", true, None);
+        let quit_item = MenuItem::with_id("quit", "Quit", true, None);
         let _ = menu.append(&quit_item);
 
         let icon = make_icon();
@@ -20,6 +27,7 @@ pub fn start_tray() -> std::sync::mpsc::Sender<String> {
         loop {
             if let Ok(event) = MenuEvent::receiver().try_recv() {
                 if event.id() == "quit" {
+                    QUIT_REQUESTED.store(true, Ordering::Relaxed);
                     break;
                 }
             }
@@ -53,3 +61,4 @@ fn make_icon() -> Icon {
     }
     Icon::from_rgba(rgba, w, h).expect("icon")
 }
+

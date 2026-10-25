@@ -95,12 +95,9 @@ fn run_daemon() -> anyhow::Result<()> {
     let _ = tray_tx.send(format!("{} - {}", calendar::weekday_name(today), calendar::format_persian(today)));
 
     loop {
-        // check quit from tray menu
-        if let Ok(event) = tray_icon::menu::MenuEvent::receiver().try_recv() {
-            if event.id() == "quit" {
-                let _ = std::fs::remove_file(pid_path());
-                break;
-            }
+        if tray::quit_requested() {
+            let _ = std::fs::remove_file(pid_path());
+            break;
         }
         std::thread::sleep(Duration::from_secs(2));
         let t = calendar::today_persian();
