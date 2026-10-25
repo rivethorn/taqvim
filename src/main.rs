@@ -5,28 +5,29 @@ mod ui;
 
 use app::{App, Mode};
 use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyModifiers};
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 fn main() -> anyhow::Result<()> {
-    let tray_tx = tray::start_tray();
+    let args: Vec<String> = std::env::args().collect();
+    if args.iter().any(|a| a == "--daemon") {
+        return run_daemon();
+    }
+
+    // ensure background daemon (tray) is running
+    ensure_daemon();
+
     let mut terminal = ratatui::init();
     let mut app = App::new();
-    let _ = tray_tx.send(format!("Taqvim - {}", calendar::format_persian(app.today)));
+    let _ = app; // tray managed by daemon now
 
-    let mut last_tray = Instant::now();
     let mut pending_g = false;
 
     loop {
         terminal.draw(|f| ui::draw(f, &app))?;
 
-        if last_tray.elapsed() >= Duration::from_secs(60) {
-            let _ = tray_tx.send(format!("{} - {}", calendar::weekday_name(app.today), calendar::format_persian(app.today)));
-            last_tray = Instant::now();
-        }
-
         if event::poll(Duration::from_millis(250))? {
             if let Event::Key(key) = event::read()? {
-                handle_key(&mut app, key, &mut pending_g, &tray_tx);
+                handle_key(&mut app, key, &mut pending_g, &dummy_tx());
             }
         }
 
@@ -38,6 +39,71 @@ fn main() -> anyhow::Result<()> {
     ratatui::restore();
     Ok(())
 }
+
+fn dummy_tx() -> std::sync::mpsc::Sender<String> {
+    // daemon handles tray; keep a dummy channel to satisfy handle_key signature
+    let (tx, _rx) = std::sync::mpsc::channel();
+    tx
+}
+
+fn pid_path() -> std::path::PathBuf {
+    let mut p = dirs::data_dir().unwrap_or_else(|| std::path::PathBuf::from("."));
+    p.push("taqvim");
+    let _ = std::fs::create_dir_all(&p);
+    p.push("daemon.pid");
+    p
+}
+
+fn is_alive(pid: u32) -> bool {
+    std::path::Path::new(&format!("/proc/{}", pid)).exists()
+}
+
+fn ensure_daemon() {
+    // check pid file
+    if let Ok(s) = std::fs::read_to_string(pid_path()) {
+        if let Ok(pid) = s.trim().parse::<u32>() {
+            if is_alive(pid) {
+                return;
+            }
+        }
+    }
+    // spawn detached daemon
+    if let Ok(exe) = std::env::current_exe() {
+        let _ = std::process::Command::new("sh")
+            .arg("-c")
+            .arg(format!("nohup \"{}\" --daemon >/dev/null 2>&1 &", exe.display()))
+            .stdin(std::process::Stdio::null())
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .spawn();
+    }
+}
+
+fn run_daemon() -> anyhow::Result<()> {
+    // single instance
+    if let Ok(s) = std::fs::read_to_string(pid_path()) {
+        if let Ok(pid) = s.trim().parse::<u32>() {
+            if pid != std::process::id() && is_alive(pid) {
+                return Ok(());
+            }
+        }
+    }
+    let _ = std::fs::write(pid_path(), std::process::id().to_string());
+
+    let tray_tx = tray::start_tray();
+    let mut today = calendar::today_persian();
+    let _ = tray_tx.send(format!("{} - {}", calendar::weekday_name(today), calendar::format_persian(today)));
+
+    loop {
+        std::thread::sleep(Duration::from_secs(60));
+        let t = calendar::today_persian();
+        if t != today {
+            today = t;
+        }
+        let _ = tray_tx.send(format!("{} - {}", calendar::weekday_name(today), calendar::format_persian(today)));
+    }
+}
+
 
 fn handle_key(app: &mut App, key: KeyEvent, pending_g: &mut bool, tray_tx: &std::sync::mpsc::Sender<String>) {
     if app.mode == Mode::Command {
