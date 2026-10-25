@@ -25,12 +25,10 @@ pub fn start_tray() -> std::sync::mpsc::Sender<u32> {
             .build()
             .expect("failed to build tray icon");
         loop {
-            if let Ok(event) = MenuEvent::receiver().try_recv() {
-                if event.id() == "quit" {
-                    QUIT_REQUESTED.store(true, Ordering::Relaxed);
-                    break;
-                }
-            }
+            if let Ok(event) = MenuEvent::receiver().try_recv() && event.id() == "quit" {
+        QUIT_REQUESTED.store(true, Ordering::Relaxed);
+        break;
+    }
             match rx.recv_timeout(std::time::Duration::from_secs(1)) {
                 Ok(day) => {
                     let _ = tray.set_icon(Some(make_icon(day)));

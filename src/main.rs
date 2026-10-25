@@ -25,11 +25,9 @@ fn main() -> anyhow::Result<()> {
     loop {
         terminal.draw(|f| ui::draw(f, &app))?;
 
-        if event::poll(Duration::from_millis(250))? {
-            if let Event::Key(key) = event::read()? {
+        if event::poll(Duration::from_millis(250))? && let Event::Key(key) = event::read()? {
                 handle_key(&mut app, key, &mut pending_g, &dummy_tx());
             }
-        }
 
         if app.should_quit {
             break;
@@ -60,12 +58,8 @@ fn is_alive(pid: u32) -> bool {
 
 fn ensure_daemon() {
     // check pid file
-    if let Ok(s) = std::fs::read_to_string(pid_path()) {
-        if let Ok(pid) = s.trim().parse::<u32>() {
-            if is_alive(pid) {
-                return;
-            }
-        }
+    if let Ok(s) = std::fs::read_to_string(pid_path()) && let Ok(pid) = s.trim().parse::<u32>() && is_alive(pid) {
+        return;
     }
     // spawn detached daemon
     if let Ok(exe) = std::env::current_exe() {
@@ -81,12 +75,8 @@ fn ensure_daemon() {
 
 fn run_daemon() -> anyhow::Result<()> {
     // single instance
-    if let Ok(s) = std::fs::read_to_string(pid_path()) {
-        if let Ok(pid) = s.trim().parse::<u32>() {
-            if pid != std::process::id() && is_alive(pid) {
-                return Ok(());
-            }
-        }
+    if let Ok(s) = std::fs::read_to_string(pid_path()) && let Ok(pid) = s.trim().parse::<u32>() && pid != std::process::id() && is_alive(pid) {
+        return Ok(());
     }
     let _ = std::fs::write(pid_path(), std::process::id().to_string());
 

@@ -101,11 +101,9 @@ impl App {
     }
 
     pub fn load_events(&mut self) {
-        if let Ok(s) = std::fs::read_to_string(Self::data_path()) {
-            if let Ok(m) = serde_json::from_str(&s) {
-                self.events = m;
-            }
-        }
+        if let Ok(s) = std::fs::read_to_string(Self::data_path()) && let Ok(m) = serde_json::from_str(&s) {
+        self.events = m;
+    }
     }
 
     pub fn save_events(&self) {
