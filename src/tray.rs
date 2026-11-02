@@ -146,7 +146,7 @@ fn make_icon(day: u32) -> Icon {
     let s = day.to_string();
     let scale: u32 = if s.len() == 1 { 4 } else { 3 };
     let digit_w = 5 * scale;
-    let gap = 2 * scale;
+    let gap = 1;
     let total_w = s.len() as u32 * digit_w + s.len().saturating_sub(1) as u32 * gap;
     let total_h = 7 * scale;
     let mut cx = ((wi) - (total_w as i32)) / 2;
